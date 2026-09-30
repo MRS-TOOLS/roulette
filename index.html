@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0c0c0c">
+    <meta name="description" content="割合を自由に設定できるシンプルなルーレットツールです。">
+    <title>ルーレット | MRS TOOLS</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main id="app">
+        <section class="roulette-card" aria-label="ルーレット">
+            <div class="wheel-wrap" id="wheelWrap">
+                <canvas id="wheelCanvas" aria-label="設定した項目のルーレット"></canvas>
+                <div class="wheel-pointer" aria-hidden="true"></div>
+            </div>
+
+            <button class="circle-btn settings-btn" id="settingsBtn" type="button" aria-label="設定を開く">
+                <svg viewBox="0 0 24 24" width="23" height="23" aria-hidden="true">
+                    <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.04-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.15 7.15 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.23-1.13.54-1.63.94L5.17 5.3a.5.5 0 0 0-.6.22L2.65 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.14 7.14 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.4 1.04.71 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.59-.23 1.13-.54 1.63-.94l2.39.96c.21.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64ZM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/>
+                </svg>
+            </button>
+
+            <button class="circle-btn spin-btn" id="spinBtn" type="button" aria-label="ルーレットをスタート">
+                <span class="play-icon" aria-hidden="true"></span>
+                <span class="stop-icon" aria-hidden="true"></span>
+            </button>
+        </section>
+
+        <section class="result-card" aria-live="polite" aria-atomic="true">
+            <span class="section-label">RESULT</span>
+            <p class="result-value" id="resultValue">STARTを押してください</p>
+        </section>
+
+        <section class="history-section">
+            <div class="history-header">
+                <h2>履歴</h2>
+                <button class="clear-btn" id="clearHistoryBtn" type="button">全削除</button>
+            </div>
+            <ul class="history-list" id="historyList">
+                <li class="history-empty">まだ履歴がありません</li>
+            </ul>
+        </section>
+
+        <p class="tools-footer-link">
+            <a href="https://mrs-tools.pages.dev/" target="_blank" rel="noopener noreferrer">MRS TOOLS</a>
+        </p>
+    </main>
+
+    <div class="modal-overlay" id="settingsModal" hidden>
+        <div class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+            <div class="modal-handle" aria-hidden="true"></div>
+            <div class="modal-header">
+                <div>
+                    <h2 id="settingsTitle">ルーレット設定</h2>
+                    <p><span id="segmentCount">6</span>分割</p>
+                </div>
+                <button class="add-segment-btn" id="addSegmentBtn" type="button">＋ 追加</button>
+            </div>
+
+            <div class="settings-column-labels" aria-hidden="true">
+                <span>内容</span>
+                <span>割合</span>
+                <span></span>
+            </div>
+            <div class="segment-list" id="segmentList"></div>
+
+            <div class="percentage-summary">
+                <span>割合の合計</span>
+                <strong id="percentageTotal">100%</strong>
+            </div>
+            <p class="settings-error" id="settingsError" role="alert"></p>
+
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn--cancel" id="settingsCancelBtn" type="button">キャンセル</button>
+                <button class="modal-btn modal-btn--confirm" id="settingsSaveBtn" type="button">完了</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay modal-overlay--center" id="confirmModal" hidden>
+        <div class="modal confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+            <h2 id="confirmTitle">履歴を全削除しますか？</h2>
+            <p>削除した履歴は元に戻せません。</p>
+            <div class="modal-actions">
+                <button class="modal-btn modal-btn--cancel" id="confirmCancelBtn" type="button">キャンセル</button>
+                <button class="modal-btn modal-btn--danger" id="confirmDeleteBtn" type="button">削除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ad-banner">
+        <div class="ad-content">
+            <!-- admax -->
+            <script src="https://adm.shinobi.jp/s/8a495d941206bf0c34aff9559f8d2cea"></script>
+            <!-- admax -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
