@@ -469,11 +469,51 @@ function renderSettingsRows() {
         weightInput.value = String(segment.weight);
         weightInput.disabled = draftEqualSpacing;
         weightInput.setAttribute("aria-label", `項目${index + 1}の比率`);
+
+        const stepperControls = document.createElement("div");
+        stepperControls.className = "weight-stepper-controls";
+
+        const increaseButton = document.createElement("button");
+        increaseButton.className = "weight-stepper-btn";
+        increaseButton.type = "button";
+        increaseButton.textContent = "▲";
+        increaseButton.setAttribute("aria-label", `項目${index + 1}の比率を増やす`);
+
+        const decreaseButton = document.createElement("button");
+        decreaseButton.className = "weight-stepper-btn";
+        decreaseButton.type = "button";
+        decreaseButton.textContent = "▼";
+        decreaseButton.setAttribute("aria-label", `項目${index + 1}の比率を減らす`);
+
+        const syncStepperButtons = () => {
+            const weight = Number(segment.weight);
+            increaseButton.disabled = draftEqualSpacing || weight >= 999;
+            decreaseButton.disabled = draftEqualSpacing || !isValidWeight(weight) || weight <= 1;
+        };
+
+        const adjustWeight = amount => {
+            const currentWeight = isValidWeight(segment.weight) ? Number(segment.weight) : 1;
+            segment.weight = Math.max(1, Math.min(999, currentWeight + amount));
+            weightInput.value = String(segment.weight);
+            syncStepperButtons();
+            updateSettingsValidation();
+        };
+
+        increaseButton.addEventListener("click", () => adjustWeight(1));
+        decreaseButton.addEventListener("click", () => adjustWeight(-1));
         weightInput.addEventListener("input", event => {
             const raw = event.target.value;
             segment.weight = raw === "" ? 0 : Number(raw);
+            syncStepperButtons();
             updateSettingsValidation();
         });
+
+        syncStepperButtons();
+        stepperControls.append(increaseButton, decreaseButton);
+
+        const weightStepper = document.createElement("div");
+        weightStepper.className = "weight-stepper";
+        weightStepper.append(weightInput, stepperControls);
 
         const share = document.createElement("span");
         share.className = "segment-share";
@@ -487,7 +527,7 @@ function renderSettingsRows() {
         removeButton.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 6V4.8C7 3.81 7.81 3 8.8 3h6.4c.99 0 1.8.81 1.8 1.8V6h3v2h-1.2l-.75 11.2A2 2 0 0 1 16.06 21H7.94a2 2 0 0 1-1.99-1.8L5.2 8H4V6h3Zm2 0h6V5H9v1Zm-1.8 2 .74 11h8.12l.74-11H7.2Z"/></svg>`;
         removeButton.addEventListener("click", () => removeSegment(segment.id));
 
-        row.append(nameWrap, weightInput, share, removeButton);
+        row.append(nameWrap, weightStepper, share, removeButton);
         segmentList.append(row);
     });
 
