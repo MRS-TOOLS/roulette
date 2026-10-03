@@ -57,7 +57,28 @@ a:focus-visible {
     max-width: 600px;
     min-height: 100dvh;
     margin: 0 auto;
-    padding: 14px;
+    padding: max(20px, env(safe-area-inset-top)) 14px 14px;
+}
+
+.app-header {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.brand {
+    margin: 0 0 5px;
+    color: var(--color-accent);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+}
+
+h1 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: clamp(1.55rem, 6vw, 2rem);
+    line-height: 1.25;
+    letter-spacing: 0.02em;
 }
 
 .roulette-card {
@@ -67,7 +88,7 @@ a:focus-visible {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
     background:
-        radial-gradient(circle at 42% 40%, rgba(255, 138, 61, 0.08), transparent 45%),
+        radial-gradient(circle at 50% 40%, rgba(255, 138, 61, 0.08), transparent 45%),
         linear-gradient(145deg, #171717, #101010);
     box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
 }
@@ -75,7 +96,7 @@ a:focus-visible {
 .wheel-wrap {
     position: absolute;
     top: 50%;
-    left: 42%;
+    left: 50%;
     width: min(72vw, 370px);
     aspect-ratio: 1;
     transform: translate(-50%, -50%);
@@ -404,11 +425,92 @@ a:focus-visible {
     pointer-events: none;
 }
 
+.equal-spacing-row {
+    min-height: 58px;
+    margin-bottom: 17px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    background: var(--color-bg-raised);
+    cursor: pointer;
+}
+
+.equal-spacing-row strong,
+.equal-spacing-row small {
+    display: block;
+}
+
+.equal-spacing-row strong {
+    font-size: 14px;
+}
+
+.equal-spacing-row small {
+    margin-top: 3px;
+    color: var(--color-text-muted);
+    font-size: 11px;
+}
+
+.toggle-switch {
+    position: relative;
+    width: 48px;
+    height: 28px;
+    flex: 0 0 auto;
+}
+
+.toggle-switch input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+}
+
+.toggle-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 20px;
+    background: #4a4a4a;
+    transition: background 0.18s ease;
+}
+
+.toggle-track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.35);
+    transition: transform 0.18s ease;
+}
+
+.toggle-switch input:checked + .toggle-track {
+    background: var(--color-accent);
+}
+
+.toggle-switch input:checked + .toggle-track::after {
+    transform: translateX(20px);
+}
+
+.toggle-switch input:focus-visible {
+    outline: none;
+}
+
+.toggle-switch input:focus-visible + .toggle-track {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+}
+
 .settings-column-labels,
 .segment-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 82px 40px;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1fr) 72px 54px 40px;
+    gap: 6px;
     align-items: center;
 }
 
@@ -419,7 +521,8 @@ a:focus-visible {
     font-size: 11px;
 }
 
-.settings-column-labels span:nth-child(2) {
+.settings-column-labels span:nth-child(2),
+.settings-column-labels span:nth-child(3) {
     text-align: center;
 }
 
@@ -465,30 +568,79 @@ a:focus-visible {
     padding: 0 10px 0 31px;
 }
 
-.percentage-input-wrap {
-    position: relative;
+.weight-stepper {
+    height: 44px;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    display: flex;
+    background: var(--color-bg-raised);
 }
 
-.segment-percentage {
-    padding: 0 25px 0 8px;
+.weight-stepper .segment-weight {
+    width: calc(100% - 26px);
+    height: 42px;
+    padding: 0 4px;
+    border: 0;
+    border-radius: 0;
     text-align: right;
     appearance: textfield;
 }
 
-.segment-percentage::-webkit-inner-spin-button,
-.segment-percentage::-webkit-outer-spin-button {
+.segment-weight::-webkit-inner-spin-button,
+.segment-weight::-webkit-outer-spin-button {
     margin: 0;
     appearance: none;
 }
 
-.percentage-symbol {
-    position: absolute;
-    top: 50%;
-    right: 9px;
+.segment-weight:disabled {
     color: var(--color-text-muted);
-    font-size: 13px;
-    transform: translateY(-50%);
+    opacity: 0.48;
+}
+
+.weight-stepper-controls {
+    width: 26px;
+    flex: 0 0 auto;
+    border-left: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+}
+
+.weight-stepper-btn {
+    width: 26px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    display: grid;
+    place-items: center;
+    background: #2d2d2d;
+    color: var(--color-text-muted);
+    font-size: 8px;
+    line-height: 1;
+}
+
+.weight-stepper-btn:first-child {
+    border-bottom: 1px solid var(--color-border);
+}
+
+.weight-stepper-btn:active:not(:disabled) {
+    background: #3a3a3a;
+    color: var(--color-accent);
+}
+
+.weight-stepper-btn:disabled {
+    color: #555;
+    opacity: 0.45;
     pointer-events: none;
+}
+
+.segment-share {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+    white-space: nowrap;
 }
 
 .remove-segment-btn {
@@ -513,29 +665,9 @@ a:focus-visible {
     color: var(--color-danger);
 }
 
-.percentage-summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid var(--color-border);
-    color: var(--color-text-muted);
-    font-size: 13px;
-}
-
-.percentage-summary strong {
-    color: var(--color-accent);
-    font-size: 16px;
-}
-
-.percentage-summary.is-invalid strong {
-    color: var(--color-danger);
-}
-
 .settings-error {
     min-height: 18px;
-    margin: 5px 0 0;
+    margin: 12px 0 0;
     color: #ed8f75;
     font-size: 12px;
     text-align: right;
@@ -617,7 +749,7 @@ a:focus-visible {
 
 @media (max-width: 380px) {
     #app {
-        padding: 10px;
+        padding: max(16px, env(safe-area-inset-top)) 10px 10px;
     }
 
     .roulette-card {
@@ -625,7 +757,7 @@ a:focus-visible {
     }
 
     .wheel-wrap {
-        left: 41%;
+        left: 50%;
         width: min(74vw, 300px);
     }
 
@@ -645,8 +777,8 @@ a:focus-visible {
 
     .settings-column-labels,
     .segment-row {
-        grid-template-columns: minmax(0, 1fr) 76px 38px;
-        gap: 6px;
+        grid-template-columns: minmax(0, 1fr) 68px 48px 38px;
+        gap: 5px;
     }
 }
 

@@ -4,12 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <meta name="theme-color" content="#0c0c0c">
-    <meta name="description" content="割合を自由に設定できるシンプルなルーレットツールです。">
+    <meta name="description" content="比率を自由に設定できるシンプルなルーレットツールです。">
     <title>ルーレット | MRS TOOLS</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <main id="app">
+        <header class="app-header">
+            <p class="brand">MRS TOOLS</p>
+            <h1>ルーレット</h1>
+        </header>
+
         <section class="roulette-card" aria-label="ルーレット">
             <div class="wheel-wrap" id="wheelWrap">
                 <canvas id="wheelCanvas" aria-label="設定した項目のルーレット"></canvas>
@@ -59,17 +64,25 @@
                 <button class="add-segment-btn" id="addSegmentBtn" type="button">＋ 追加</button>
             </div>
 
+            <label class="equal-spacing-row" for="equalSpacingToggle">
+                <span>
+                    <strong>等間隔にする</strong>
+                    <small>すべて同じ当たりやすさにします</small>
+                </span>
+                <span class="toggle-switch">
+                    <input id="equalSpacingToggle" type="checkbox" role="switch">
+                    <span class="toggle-track" aria-hidden="true"></span>
+                </span>
+            </label>
+
             <div class="settings-column-labels" aria-hidden="true">
                 <span>内容</span>
+                <span>比率</span>
                 <span>割合</span>
                 <span></span>
             </div>
             <div class="segment-list" id="segmentList"></div>
 
-            <div class="percentage-summary">
-                <span>割合の合計</span>
-                <strong id="percentageTotal">100%</strong>
-            </div>
             <p class="settings-error" id="settingsError" role="alert"></p>
 
             <div class="modal-actions">

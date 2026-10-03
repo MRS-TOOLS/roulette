@@ -2,6 +2,7 @@
 
 const STORAGE_KEYS = {
     settings: "mrsToolsRouletteSettingsV1",
+    equalSpacing: "mrsToolsRouletteEqualSpacingV1",
     history: "mrsToolsRouletteHistoryV1",
     currentResult: "mrsToolsRouletteCurrentResultV1"
 };
@@ -29,12 +30,12 @@ const SEGMENT_COLORS = [
 ];
 
 const DEFAULT_SEGMENTS = [
-    { id: createId(), label: "項目1", percentage: 17 },
-    { id: createId(), label: "項目2", percentage: 17 },
-    { id: createId(), label: "項目3", percentage: 17 },
-    { id: createId(), label: "項目4", percentage: 17 },
-    { id: createId(), label: "項目5", percentage: 16 },
-    { id: createId(), label: "項目6", percentage: 16 }
+    { id: createId(), label: "項目1", weight: 1 },
+    { id: createId(), label: "項目2", weight: 1 },
+    { id: createId(), label: "項目3", weight: 1 },
+    { id: createId(), label: "項目4", weight: 1 },
+    { id: createId(), label: "項目5", weight: 1 },
+    { id: createId(), label: "項目6", weight: 1 }
 ];
 
 const canvas = document.getElementById("wheelCanvas");
@@ -50,7 +51,7 @@ const settingsModal = document.getElementById("settingsModal");
 const segmentList = document.getElementById("segmentList");
 const segmentCount = document.getElementById("segmentCount");
 const addSegmentBtn = document.getElementById("addSegmentBtn");
-const percentageTotal = document.getElementById("percentageTotal");
+const equalSpacingToggle = document.getElementById("equalSpacingToggle");
 const settingsError = document.getElementById("settingsError");
 const settingsCancelBtn = document.getElementById("settingsCancelBtn");
 const settingsSaveBtn = document.getElementById("settingsSaveBtn");
@@ -60,7 +61,9 @@ const confirmCancelBtn = document.getElementById("confirmCancelBtn");
 const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
 
 let segments = loadSegments();
+let equalSpacing = loadBoolean(STORAGE_KEYS.equalSpacing, false);
 let draftSegments = [];
+let draftEqualSpacing = false;
 let history = loadHistory();
 let currentResult = loadCurrentResult();
 let rotation = 0;
@@ -92,6 +95,14 @@ function bindEvents() {
     settingsCancelBtn.addEventListener("click", closeSettings);
     settingsSaveBtn.addEventListener("click", saveSettings);
     addSegmentBtn.addEventListener("click", addSegment);
+    equalSpacingToggle.addEventListener("change", () => {
+        draftEqualSpacing = equalSpacingToggle.checked;
+        draftSegments = draftSegments.map(segment => ({
+            ...segment,
+            weight: isValidWeight(segment.weight) ? Number(segment.weight) : 1
+        }));
+        renderSettingsRows();
+    });
     clearHistoryBtn.addEventListener("click", () => {
         if (history.length > 0) openModal(confirmModal);
     });
@@ -139,9 +150,10 @@ function drawWheel() {
     ctx.translate(size / 2, size / 2);
     ctx.rotate(rotation);
 
+    const totalWeight = getTotalWeight(segments, equalSpacing);
     let startAngle = 0;
     segments.forEach((segment, index) => {
-        const sliceAngle = TAU * segment.percentage / 100;
+        const sliceAngle = TAU * getSegmentWeight(segment, equalSpacing) / totalWeight;
         const endAngle = startAngle + sliceAngle;
         const color = SEGMENT_COLORS[index % SEGMENT_COLORS.length];
 
@@ -260,24 +272,27 @@ function stopSpin() {
     const currentNormalized = normalizeAngle(rotation);
     const alignmentDelta = normalizeAngle(desiredRotation - currentNormalized);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const extraTurns = reducedMotion ? 1 : 3 + Math.floor(Math.random() * 3);
-    const targetRotation = rotation + alignmentDelta + TAU * extraTurns;
-    const duration = reducedMotion ? 500 : 2500 + Math.random() * 500;
+    const extraTurns = reducedMotion ? 1 : 2;
+    const travelDistance = alignmentDelta + TAU * extraTurns;
+    const initialVelocity = spinVelocity;
+    const duration = 2 * travelDistance / initialVelocity;
     const startRotation = rotation;
     const startTime = performance.now();
 
     function animateStop(now) {
-        const progress = Math.min((now - startTime) / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 4);
-        rotation = startRotation + (targetRotation - startRotation) * eased;
+        const elapsed = Math.min(now - startTime, duration);
+        const deceleration = initialVelocity / duration;
+        rotation = startRotation
+            + initialVelocity * elapsed
+            - deceleration * elapsed * elapsed / 2;
         drawWheel();
 
-        if (progress < 1) {
+        if (elapsed < duration) {
             animationFrameId = requestAnimationFrame(animateStop);
             return;
         }
 
-        rotation = normalizeAngle(targetRotation);
+        rotation = normalizeAngle(startRotation + travelDistance);
         drawWheel();
         finishSpin();
     }
@@ -302,10 +317,11 @@ function finishSpin() {
 
 function getSelectedSegment() {
     const wheelAngleAtPointer = normalizeAngle(POINTER_ANGLE - rotation);
+    const totalWeight = getTotalWeight(segments, equalSpacing);
     let cursor = 0;
 
     for (let index = 0; index < segments.length; index += 1) {
-        cursor += TAU * segments[index].percentage / 100;
+        cursor += TAU * getSegmentWeight(segments[index], equalSpacing) / totalWeight;
         if (wheelAngleAtPointer < cursor || index === segments.length - 1) {
             return { ...segments[index], index };
         }
@@ -407,12 +423,15 @@ function clearAllHistory() {
 function openSettings() {
     if (spinState !== "idle") return;
     draftSegments = segments.map(segment => ({ ...segment }));
+    draftEqualSpacing = equalSpacing;
+    equalSpacingToggle.checked = draftEqualSpacing;
     renderSettingsRows();
     openModal(settingsModal);
 }
 
 function closeSettings() {
     draftSegments = [];
+    draftEqualSpacing = equalSpacing;
     closeModal(settingsModal);
 }
 
@@ -440,28 +459,65 @@ function renderSettingsRows() {
         });
         nameWrap.append(nameInput);
 
-        const percentageWrap = document.createElement("div");
-        percentageWrap.className = "percentage-input-wrap";
+        const weightInput = document.createElement("input");
+        weightInput.className = "segment-input segment-weight";
+        weightInput.type = "number";
+        weightInput.inputMode = "numeric";
+        weightInput.min = "1";
+        weightInput.max = "999";
+        weightInput.step = "1";
+        weightInput.value = String(segment.weight);
+        weightInput.disabled = draftEqualSpacing;
+        weightInput.setAttribute("aria-label", `項目${index + 1}の比率`);
 
-        const percentageInput = document.createElement("input");
-        percentageInput.className = "segment-input segment-percentage";
-        percentageInput.type = "number";
-        percentageInput.inputMode = "numeric";
-        percentageInput.min = "1";
-        percentageInput.max = "99";
-        percentageInput.step = "1";
-        percentageInput.value = String(segment.percentage);
-        percentageInput.setAttribute("aria-label", `項目${index + 1}の割合`);
-        percentageInput.addEventListener("input", event => {
+        const stepperControls = document.createElement("div");
+        stepperControls.className = "weight-stepper-controls";
+
+        const increaseButton = document.createElement("button");
+        increaseButton.className = "weight-stepper-btn";
+        increaseButton.type = "button";
+        increaseButton.textContent = "▲";
+        increaseButton.setAttribute("aria-label", `項目${index + 1}の比率を増やす`);
+
+        const decreaseButton = document.createElement("button");
+        decreaseButton.className = "weight-stepper-btn";
+        decreaseButton.type = "button";
+        decreaseButton.textContent = "▼";
+        decreaseButton.setAttribute("aria-label", `項目${index + 1}の比率を減らす`);
+
+        const syncStepperButtons = () => {
+            const weight = Number(segment.weight);
+            increaseButton.disabled = draftEqualSpacing || weight >= 999;
+            decreaseButton.disabled = draftEqualSpacing || !isValidWeight(weight) || weight <= 1;
+        };
+
+        const adjustWeight = amount => {
+            const currentWeight = isValidWeight(segment.weight) ? Number(segment.weight) : 1;
+            segment.weight = Math.max(1, Math.min(999, currentWeight + amount));
+            weightInput.value = String(segment.weight);
+            syncStepperButtons();
+            updateSettingsValidation();
+        };
+
+        increaseButton.addEventListener("click", () => adjustWeight(1));
+        decreaseButton.addEventListener("click", () => adjustWeight(-1));
+        weightInput.addEventListener("input", event => {
             const raw = event.target.value;
-            segment.percentage = raw === "" ? 0 : Number(raw);
+            segment.weight = raw === "" ? 0 : Number(raw);
+            syncStepperButtons();
             updateSettingsValidation();
         });
 
-        const symbol = document.createElement("span");
-        symbol.className = "percentage-symbol";
-        symbol.textContent = "%";
-        percentageWrap.append(percentageInput, symbol);
+        syncStepperButtons();
+        stepperControls.append(increaseButton, decreaseButton);
+
+        const weightStepper = document.createElement("div");
+        weightStepper.className = "weight-stepper";
+        weightStepper.append(weightInput, stepperControls);
+
+        const share = document.createElement("span");
+        share.className = "segment-share";
+        share.dataset.shareIndex = String(index);
 
         const removeButton = document.createElement("button");
         removeButton.className = "remove-segment-btn";
@@ -471,7 +527,7 @@ function renderSettingsRows() {
         removeButton.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M7 6V4.8C7 3.81 7.81 3 8.8 3h6.4c.99 0 1.8.81 1.8 1.8V6h3v2h-1.2l-.75 11.2A2 2 0 0 1 16.06 21H7.94a2 2 0 0 1-1.99-1.8L5.2 8H4V6h3Zm2 0h6V5H9v1Zm-1.8 2 .74 11h8.12l.74-11H7.2Z"/></svg>`;
         removeButton.addEventListener("click", () => removeSegment(segment.id));
 
-        row.append(nameWrap, percentageWrap, removeButton);
+        row.append(nameWrap, weightStepper, share, removeButton);
         segmentList.append(row);
     });
 
@@ -481,20 +537,17 @@ function renderSettingsRows() {
 function addSegment() {
     if (draftSegments.length >= MAX_SEGMENTS) return;
 
-    const newShare = Math.max(1, Math.round(100 / (draftSegments.length + 1)));
-    const scaledExisting = scaleToTotal(
-        draftSegments.map(segment => segment.percentage),
-        100 - newShare
-    );
+    const validWeights = draftSegments
+        .map(segment => Number(segment.weight))
+        .filter(isValidWeight);
+    const averageWeight = validWeights.length > 0
+        ? Math.max(1, Math.min(999, Math.round(validWeights.reduce((sum, value) => sum + value, 0) / validWeights.length)))
+        : 1;
 
-    draftSegments = draftSegments.map((segment, index) => ({
-        ...segment,
-        percentage: scaledExisting[index]
-    }));
     draftSegments.push({
         id: createId(),
         label: `項目${draftSegments.length + 1}`,
-        percentage: newShare
+        weight: averageWeight
     });
     renderSettingsRows();
     focusLastSegmentName();
@@ -504,11 +557,6 @@ function removeSegment(id) {
     if (draftSegments.length <= MIN_SEGMENTS) return;
 
     draftSegments = draftSegments.filter(segment => segment.id !== id);
-    const normalized = scaleToTotal(draftSegments.map(segment => segment.percentage), 100);
-    draftSegments = draftSegments.map((segment, index) => ({
-        ...segment,
-        percentage: normalized[index]
-    }));
     renderSettingsRows();
 }
 
@@ -524,37 +572,51 @@ function focusLastSegmentName() {
 }
 
 function updateSettingsValidation() {
-    const total = draftSegments.reduce((sum, segment) => sum + (Number(segment.percentage) || 0), 0);
     const hasEmptyLabel = draftSegments.some(segment => !segment.label.trim());
-    const hasInvalidPercentage = draftSegments.some(segment => (
-        !Number.isInteger(Number(segment.percentage)) ||
-        Number(segment.percentage) < 1 ||
-        Number(segment.percentage) > 99
-    ));
-    const isValid = total === 100 && !hasEmptyLabel && !hasInvalidPercentage;
+    const hasInvalidWeight = draftSegments.some(segment => !isValidWeight(segment.weight));
+    const isValid = !hasEmptyLabel && !hasInvalidWeight;
 
     segmentCount.textContent = String(draftSegments.length);
-    percentageTotal.textContent = `${total}%`;
-    percentageTotal.parentElement.classList.toggle("is-invalid", total !== 100);
+    equalSpacingToggle.checked = draftEqualSpacing;
     addSegmentBtn.disabled = draftSegments.length >= MAX_SEGMENTS;
     settingsSaveBtn.disabled = !isValid;
+    updateShareDisplays();
 
     if (hasEmptyLabel) settingsError.textContent = "内容を入力してください";
-    else if (hasInvalidPercentage) settingsError.textContent = "割合は1〜99の整数で入力してください";
-    else if (total !== 100) settingsError.textContent = "割合の合計を100%にしてください";
+    else if (hasInvalidWeight) settingsError.textContent = "比率は1〜999の整数で入力してください";
     else settingsError.textContent = "";
+}
+
+function updateShareDisplays() {
+    const totalWeight = getTotalWeight(draftSegments, draftEqualSpacing);
+    segmentList.querySelectorAll(".segment-share").forEach(element => {
+        const index = Number(element.dataset.shareIndex);
+        const segment = draftSegments[index];
+        const share = segment
+            ? getSegmentWeight(segment, draftEqualSpacing) / totalWeight * 100
+            : 0;
+        element.textContent = formatPercentage(share);
+    });
 }
 
 function saveSettings() {
     updateSettingsValidation();
     if (settingsSaveBtn.disabled) return;
 
-    segments = draftSegments.map(segment => ({
+    const effectiveWeights = draftEqualSpacing
+        ? draftSegments.map(() => 1)
+        : draftSegments.map(segment => Number(segment.weight));
+    const compatiblePercentages = scaleToTotal(effectiveWeights, 100);
+
+    segments = draftSegments.map((segment, index) => ({
         id: segment.id,
         label: segment.label.trim(),
-        percentage: Number(segment.percentage)
+        weight: Number(segment.weight),
+        percentage: compatiblePercentages[index]
     }));
+    equalSpacing = draftEqualSpacing;
     saveJson(STORAGE_KEYS.settings, segments);
+    saveJson(STORAGE_KEYS.equalSpacing, equalSpacing);
     rotation = 0;
     drawWheel();
     closeSettings();
@@ -603,6 +665,29 @@ function distributeEvenly(count, total) {
     return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
 }
 
+function getSegmentWeight(segment, useEqualSpacing) {
+    if (useEqualSpacing) return 1;
+    const weight = Number(segment?.weight);
+    return isValidWeight(weight) ? weight : 0;
+}
+
+function getTotalWeight(segmentItems, useEqualSpacing) {
+    if (useEqualSpacing) return Math.max(1, segmentItems.length);
+    const total = segmentItems.reduce((sum, segment) => (
+        sum + getSegmentWeight(segment, false)
+    ), 0);
+    return total > 0 ? total : 1;
+}
+
+function isValidWeight(value) {
+    const numericValue = Number(value);
+    return Number.isInteger(numericValue) && numericValue >= 1 && numericValue <= 999;
+}
+
+function formatPercentage(value) {
+    return `${new Intl.NumberFormat("ja-JP", { maximumFractionDigits: 1 }).format(value)}%`;
+}
+
 function openModal(modal) {
     modal.hidden = false;
     document.body.style.overflow = "hidden";
@@ -620,10 +705,13 @@ function loadSegments() {
     if (!isValidSegments(saved)) {
         return DEFAULT_SEGMENTS.map(segment => ({ ...segment }));
     }
-    return saved.map(segment => ({
+    const weights = saved.map(segment => Number(segment.weight ?? segment.percentage));
+    const compatiblePercentages = scaleToTotal(weights, 100);
+    return saved.map((segment, index) => ({
         id: typeof segment.id === "string" ? segment.id : createId(),
         label: segment.label.trim(),
-        percentage: Number(segment.percentage)
+        weight: weights[index],
+        percentage: compatiblePercentages[index]
     }));
 }
 
@@ -665,15 +753,17 @@ function loadCurrentResult() {
 
 function isValidSegments(value) {
     if (!Array.isArray(value) || value.length < MIN_SEGMENTS || value.length > MAX_SEGMENTS) return false;
-    const total = value.reduce((sum, segment) => sum + Number(segment?.percentage || 0), 0);
-    return total === 100 && value.every(segment => (
+    return value.every(segment => (
         segment &&
         typeof segment.label === "string" &&
         segment.label.trim() &&
-        Number.isInteger(Number(segment.percentage)) &&
-        Number(segment.percentage) >= 1 &&
-        Number(segment.percentage) <= 99
+        isValidWeight(segment.weight ?? segment.percentage)
     ));
+}
+
+function loadBoolean(key, fallback) {
+    const value = loadJson(key);
+    return typeof value === "boolean" ? value : fallback;
 }
 
 function loadArray(key) {
