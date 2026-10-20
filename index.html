@@ -108,6 +108,14 @@
         </div>
     </div>
 
+    <script src="script.js"></script>
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" })
+                .catch(error => console.warn("オフライン機能を登録できませんでした", error));
+        }
+    </script>
+
     <div class="ad-banner">
         <div class="ad-content">
             <!-- admax -->
@@ -116,14 +124,5 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
-    <script>
-        if ("serviceWorker" in navigator) {
-            window.addEventListener("load", () => {
-                navigator.serviceWorker.register("./service-worker.js")
-                    .catch(error => console.warn("オフライン機能を登録できませんでした", error));
-            });
-        }
-    </script>
 </body>
 </html>
